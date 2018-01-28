@@ -8,34 +8,39 @@ class KmerAutoencoder:
     self.num_codes = num_codes
   
   def model(self, X):
-    hidden1 = fully_connected(X, self.num_neurons,
-                              normalizer_fn=batch_norm,
-                              reuse=tf.AUTO_REUSE, scope='hidden1')
-    hidden2 = fully_connected(hidden1, self.num_neurons,
-                              normalizer_fn=batch_norm,
-                              reuse=tf.AUTO_REUSE, scope='hidden2')
-    hidden3 = fully_connected(hidden1, self.num_neurons,
-                              normalizer_fn=batch_norm,
-                              reuse=tf.AUTO_REUSE, scope='hidden3')
-    mean = fully_connected(hidden2, self.num_codes,
+    def res_full(input, n_out, scope):
+      out = fully_connected(input, n_out,
+                            normalizer_fn=batch_norm,
+                            reuse=tf.AUTO_REUSE, scope=scope)
+      return tf.add(input, out)
+    
+    encoder_out = fully_connected(X, self.num_neurons,
+                                  normalizer_fn=batch_norm,
+                                  reuse=tf.AUTO_REUSE,
+                                  scope='encoder1')
+    for n_layer in range(2,9):
+      encoder_out = res_full(encoder_out, 
+                             self.num_neurons, scope='encoder'+str(n_layer))
+    
+    mean = fully_connected(encoder_out, self.num_codes,
                            activation_fn=None,
                            reuse=tf.AUTO_REUSE, scope='mean')
-    gamma = fully_connected(hidden2, self.num_codes,
+    gamma = fully_connected(encoder_out, self.num_codes,
                             activation_fn=None,
                             reuse=tf.AUTO_REUSE, scope='gamma')
     sigma = tf.exp(0.5 * gamma)
     noise = tf.random_normal(tf.shape(sigma), dtype=tf.float32)
     codes = mean + sigma * noise
-    hidden4 = fully_connected(codes, self.num_neurons,
-                              normalizer_fn=batch_norm,
-                              reuse=tf.AUTO_REUSE, scope='hidden4')
-    hidden5 = fully_connected(codes, self.num_neurons,
-                              normalizer_fn=batch_norm,
-                              reuse=tf.AUTO_REUSE, scope='hidden5')
-    hidden6 = fully_connected(hidden3, self.num_neurons,
-                              normalizer_fn=batch_norm,
-                              reuse=tf.AUTO_REUSE, scope='hidden6')
-    logits = fully_connected(hidden4, 136,
+    
+    decoder_out = fully_connected(codes, self.num_neurons,
+                                  normalizer_fn=batch_norm,
+                                  reuse=tf.AUTO_REUSE,
+                                  scope='decoder1')
+    for n_layer in range(2,9):
+      decoder_out = res_full(decoder_out,
+                             self.num_neurons, scope='decoder'+str(n_layer))
+
+    logits = fully_connected(decoder_out, 136,
                              activation_fn=None,
                              reuse=tf.AUTO_REUSE, scope='logits')
     outputs = tf.nn.sigmoid(logits)

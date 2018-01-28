@@ -44,7 +44,7 @@ for s in args.test_kmer_file:
 test_kmer = np.array(test_kmer)
 test_size = len(test_read_name)
 
-KA = KmerAutoencoder(num_neurons=400, num_codes=20)
+KA = KmerAutoencoder(num_neurons=500, num_codes=40)
 ll,rl,opt = KA.train(batch_iterator.get_next(), learning_rate=0.001)
 
 _,_,test_codes,_,_,test_ll,test_rl = KA.model(test_kmer)

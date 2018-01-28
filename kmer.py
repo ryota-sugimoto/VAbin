@@ -65,9 +65,10 @@ if __name__ == '__main__':
    print('\t'.join([contig_name]+list(map(str,kmer_count))))
 '''
 
-for s in args.file:
-  readname=s.strip()[1:]
-  seq = next(args.file).strip().upper()
-  kmer_count = counter.count(seq)
-  print('\t'.join([readname]+list(map(str,kmer_count))))
-  next(args.file),next(args.file)
+  print('\t'.join(['name']+counter.balanced_kmer))
+  for s in args.file:
+    readname=s.strip()[1:]
+    seq = next(args.file).strip().upper()
+    kmer_count = counter.count(seq)
+    print('\t'.join([readname]+list(map(str,kmer_count))))
+    next(args.file),next(args.file)
