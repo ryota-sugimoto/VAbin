@@ -44,7 +44,7 @@ class KmerAutoencoder:
     for n_layer in range(2, self.num_hidden_layers+1):
       decoder_out = res_full(decoder_out,
                              self.num_neurons, scope='decoder'+str(n_layer))
-
+    
     logits = fully_connected(decoder_out, 136,
                              activation_fn=None,
                              reuse=tf.AUTO_REUSE, scope='logits')
@@ -53,15 +53,24 @@ class KmerAutoencoder:
                               activation_fn=None,
                               reuse=tf.AUTO_REUSE, scope='o_gamma')
     o_sigma = tf.exp(0.5 * o_gamma)
-    
+    normal_dist = tf.distributions.Normal(o_mean, o_sigma) 
+    outputs = normal_dist.mode()
+    reconstruction_loss = -tf.reduce_sum(normal_dist.log_prob(X))
+
+    '''
+    alpha = fully_connected(decoder_out, 136,
+                            reuse=tf.AUTO_REUSE, scope='alpha')
+    beta = fully_connected(decoder_out, 136,
+                           reuse=tf.AUTO_REUSE, scope='beta')
+    beta_dist = tf.distributions.Beta(alpha+1e-12, beta+1e-12)
+    outputs = beta_dist.mode()
+    reconstruction_loss = -tf.reduce_sum(beta_dist.log_prob(X))
+    '''
 
     latent_loss = 0.5 * tf.reduce_sum(
       tf.exp(gamma) + tf.square(mean) - 1 - gamma)
 
-    reconstruction_loss = tf.reduce_sum(
-      0.5*tf.log(2*pi) + 0.5*o_gamma \
-      + tf.losses.mean_squared_error(labels=X, predictions=o_mean)/(2*o_sigma**2))
-    return mean,gamma,codes,logits,o_mean,latent_loss,reconstruction_loss
+    return mean,gamma,codes,None,outputs,latent_loss,reconstruction_loss
 
   def train(self, X, learning_rate):
     mean,gamma,codes,logits,outputs,ll,rl = self.model(X)
