@@ -6,32 +6,22 @@ from model import KmerAutoencoder
 
 def data_generator(f):
   def gen():
+    while True:
       for s in f:
         r = np.array([float(n) for n in s.strip().split()[1:]],
                       dtype=np.float32)
         yield r/np.sum(r)
+      f.seek(0)
   return gen
-
-'''
-def data_generator(f):
-  l = []
-  for s in f:
-    r = np.array([float(n) for n in s.strip().split()[2:]],
-                      dtype=np.float32)
-    l.append(r/np.sum(r))
-  def gen():
-    while True:
-      for mer in l:
-        yield mer
-  return gen
-'''
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('train_kmer_file', type=argparse.FileType('r'))
 parser.add_argument('test_kmer_file', type=argparse.FileType('r'))
 parser.add_argument('test_codes_out', type=str)
-parser.add_argument('--batch_size', type=int, default=1000)
+parser.add_argument('--batch_size', type=int, default=100000)
+parser.add_argument('--max_batch', type=int, default=10000)
+parser.add_argument('--report_per_batch', type=int, default=100)
 args = parser.parse_args()
 
 dataset = tf.data.Dataset.from_generator(data_generator(args.train_kmer_file),
@@ -53,7 +43,7 @@ for s in args.test_kmer_file:
 test_kmer = np.array(test_kmer)
 test_size = len(test_read_name)
 
-KA = KmerAutoencoder(num_neurons=500, num_hidden_layers=8, num_codes=2)
+KA = KmerAutoencoder(num_neurons=500, num_hidden_layers=8, num_codes=20)
 ll,rl,opt = KA.train(batch_iterator.get_next(), learning_rate=0.001)
 
 _,_,test_codes,_,_,test_ll,test_rl = KA.model(test_kmer)
@@ -63,13 +53,13 @@ num_batch = 0
 with tf.Session() as sess:
   init.run()
   begin = time.clock()
-  while True:
+  while num_batch < args.max_batch:
     try:
       latent_loss, reconst_loss, _ = sess.run([ll,rl,opt])
     except tf.errors.OutOfRangeError:
       break
     num_batch += 1
-    if num_batch % 1000 == 0:
+    if num_batch % args.report_per_batch == 0:
       print('train_loss', latent_loss/args.batch_size,
                     reconst_loss/args.batch_size,
                     (latent_loss+reconst_loss)/args.batch_size, flush=True)

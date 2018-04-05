@@ -41,7 +41,7 @@ class KmerCounter():
     seq = seq.upper()
     count = defaultdict(int)
     for i in range(len(seq)-self.k+1):
-      count[seq[i:i+self.k]] += 1
+      count[seq[i:i+self.k]] += 1.0
     count = self.balance_strand(count)
     v = []
     for mer in self.balanced_kmer:
@@ -49,26 +49,26 @@ class KmerCounter():
     return v
        
 if __name__ == '__main__':
- import argparse
- parser = argparse.ArgumentParser()
- parser.add_argument('k', type=int)
- parser.add_argument('file', type=argparse.FileType('r'))
- args = parser.parse_args()
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument('k', type=int)
+  parser.add_argument('fastq1', type=argparse.FileType('r'))
+  parser.add_argument('fastq2', type=argparse.FileType('r'))
+  args = parser.parse_args()
+  
+  counter = KmerCounter(args.k)
  
- counter = KmerCounter(args.k)
- 
-'''
- for s in args.file:
-   contig_name = s.strip()[1:]
-   contig = next(args.file).strip()
-   kmer_count = counter.count(contig)
-   print('\t'.join([contig_name]+list(map(str,kmer_count))))
-'''
-
-  print('\t'.join(['name']+counter.balanced_kmer))
-  for s in args.file:
-    readname=s.strip()[1:]
-    seq = next(args.file).strip().upper()
-    kmer_count = counter.count(seq)
+  #print('\t'.join(['name']+counter.balanced_kmer))
+  for s in args.fastq1:
+    readname=s.strip()[1:].split('#')[0]
+    seq1 = next(args.fastq1).strip().upper()
+    count1 = counter.count(seq1)
+    next(args.fastq1), next(args.fastq1)
+    
+    next(args.fastq2)
+    seq2 = next(args.fastq2).strip().upper()
+    count2 = counter.count(seq2)
+    next(args.fastq2), next(args.fastq2)
+    
+    kmer_count = map(lambda x,y:x+y, count1, count2)
     print('\t'.join([readname]+list(map(str,kmer_count))))
-    next(args.file),next(args.file)
