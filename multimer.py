@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from collections import defaultdict
 from itertools import product
+from itertools import chain
 
 def reverse_complement(seq):
   comp = {'A': 'T',
@@ -51,22 +52,24 @@ class KmerCounter():
 if __name__ == '__main__':
   import argparse
   parser = argparse.ArgumentParser()
-  parser.add_argument('k', type=int)
+  parser.add_argument('--max_k', default=6, type=int)
   parser.add_argument('fastq1', type=argparse.FileType('r'))
   parser.add_argument('fastq2', type=argparse.FileType('r'))
   args = parser.parse_args()
   
-  counter = KmerCounter(args.k)
+  counters = [KmerCounter(k) for k in range(1, args.max_k+1)]
  
   for s in args.fastq1:
     readname=s.strip()[1:].split('#')[0]
     seq1 = next(args.fastq1).strip().upper()
-    count1 = counter.count(seq1)
+    count1 = [counter.count(seq1) for counter in counters]
+    count1 = chain.from_iterable(count1)
     next(args.fastq1), next(args.fastq1)
     
     next(args.fastq2)
     seq2 = next(args.fastq2).strip().upper()
-    count2 = counter.count(seq2)
+    count2 = [counter.count(seq2) for counter in counters]
+    count2 = chain.from_iterable(count2)
     next(args.fastq2), next(args.fastq2)
     
     kmer_count = map(lambda x,y:x+y, count1, count2)
