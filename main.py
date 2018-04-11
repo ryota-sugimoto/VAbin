@@ -2,7 +2,7 @@
 import tensorflow as tf
 import numpy as np
 import time
-from model import KmerAutoencoder
+from multimer_model import KmerAutoencoder
 
 def data_generator(f):
   def gen():
@@ -26,7 +26,7 @@ args = parser.parse_args()
 
 dataset = tf.data.Dataset.from_generator(data_generator(args.train_kmer_file),
                                          tf.float32,
-                                         [136])
+                                         [2772])
 batch = dataset.batch(batch_size=args.batch_size)
 batch_iterator = batch.make_one_shot_iterator()
 

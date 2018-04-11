@@ -23,7 +23,7 @@ class KmerAutoencoder:
     scopes = ['monomer', 'dimer', 'trimer',
               'tetramer', 'pentamer', 'hexamer']
     mers = [X[:, :2], X[:, 2:12], X[:, 12:44],
-            X[:, 44:180], X[:, 180:692] ,X[:, 692:2772]]
+            X[:, 44:180], X[:, 180:692] ,X[:, 692:]]
     kmer_encoder_outputs = []
     for size, scope, mer in zip(layer_sizes, scopes, mers):
       kmer_encoder_output = fully_connected(mer, size,
@@ -33,15 +33,14 @@ class KmerAutoencoder:
       for n_layer in range(1,4):
         kmer_encoder_output = res_full(kmer_encoder_output, size,
                                     scope=scope+'_encoder_'+str(n_layer))
-      kmer_encoder_output = fully_connected(kmer_encoder_output,
-                        self.num_neurons,
-                        activation_fn=None,
-                        reuse=tf.AUTO_REUSE,
-                        scope=scope+'_encoder_'+str(n_layer+1)))
-      kmer_layer_outputs.append(kmer_encoder_output)
+      kmer_encoder_outputs.append(kmer_encoder_output)
     
-    encoder_out = tf.add_n(kmer_layer_outputs)
-    for n_layer in range(3):
+    encoder_out = tf.concat(kmer_encoder_outputs, 2)
+    encoder_out = fully_connected(encoder_out, self.num_neurons,
+                                  activation_fn=None,
+                                  reuse=tf.AUTO_REUSE,
+                                  scope='encoder_0')
+    for n_layer in range(1,4):
       encoder_out = res_full(encoder_out, self.num_neurons,
                              scope='encoder_'+str(n_layer))
     
@@ -62,8 +61,8 @@ class KmerAutoencoder:
     for n_layer in range(1,4):
       decoder_out = res_full(decoder_out, self.num_neurons,
                              scope='decoder_'+str(n_layer))
-    kmer_decoder_outputs = []
-    for kmer_size, layer_size, scope in zip(kmer_sizes, layers_sizes, scopes):
+    logits = []
+    for kmer_size, layer_size, scope in zip(kmer_sizes, layer_sizes, scopes):
       kmer_decoder_output = fully_connected(decoder_out, size,
                                             activation_fn=None,
                                             reuse=tf.AUTO_REUSE,
@@ -71,17 +70,15 @@ class KmerAutoencoder:
       for n_layer in range(1,4):
         kmer_decoder_output = res_full(kmer_decoder_output, size,
                                        scope=scope+'_decoder_'+str(n_layer))
-        kmer_decoder_output = fully_connected(kmer_decoder_output, kmer_size,
-                                       activation_fn=None,
-                                       reuse=tf.AUTO_REUSE,
-                                       scope=scope+'_decoder_'+str(n_layer+1))
-      kmer_decoder_outputs.append(kmer_decoder_output)
-    decoder_out = tf.concat(kmer_decoder_outputs)
+      kmer_logits = fully_connected(kmer_decoder_output, kmer_size,
+                                    activation_fn=None,
+                                    reuse=tf.AUTO_REUSE,
+                                    scope=scope+'_logits')
+      
+      logits.append(kmer_logits)
+    all_logits = tf.concat(logits,1)
     
-    logits = fully_connected(decoder_out, sum(kmer_sizes),
-                             activation_fn=None,
-                             reuse=tf.AUTO_REUSE, scope='logits')
-    o_mean = tf.nn.sigmoid(logits)
+    o_mean = tf.nn.sigmoid(all_logits)
     o_gamma = fully_connected(decoder_out, sum(kmer_sizes),
                               activation_fn=None,
                               reuse=tf.AUTO_REUSE, scope='o_gamma')
