@@ -10,7 +10,7 @@ def data_generator(f):
       for s in f:
         r = np.array([float(n) for n in s.strip().split()[1:]],
                       dtype=np.float32)
-        yield r/np.sum(r)
+        yield r
       f.seek(0)
   return gen
 
@@ -19,10 +19,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('train_kmer_file', type=argparse.FileType('r'))
 parser.add_argument('test_kmer_file', type=argparse.FileType('r'))
 parser.add_argument('test_codes_out', type=str)
-parser.add_argument('--batch_size', type=int, default=10000)
+parser.add_argument('--num_codes', type=int, default=20)
+parser.add_argument('--batch_size', type=int, default=5000)
 parser.add_argument('--max_batch', type=int, default=100000)
 parser.add_argument('--report_per_batch', type=int, default=100)
 args = parser.parse_args()
+
 
 dataset = tf.data.Dataset.from_generator(data_generator(args.train_kmer_file),
                                          tf.float32,
@@ -39,11 +41,13 @@ for s in args.test_kmer_file:
   test_read_name.append(l[0])
   test_taxon.append(l[1])
   r = np.array([ float(n) for n in l[2:]], dtype=np.float32)
-  test_kmer.append(r/np.sum(r))
+  test_kmer.append(r)
 test_kmer = np.array(test_kmer)
 test_size = len(test_read_name)
 
-KA = KmerAutoencoder(num_neurons=500, num_hidden_layers=8, num_codes=20)
+KA = KmerAutoencoder(num_neurons=500,
+                     num_hidden_layers=8,
+                     num_codes=args.num_codes)
 ll,rl,opt = KA.train(batch_iterator.get_next(), learning_rate=0.001)
 
 _,_,test_codes,_,_,test_ll,test_rl = KA.model(test_kmer)
