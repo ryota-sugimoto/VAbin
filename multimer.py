@@ -39,22 +39,24 @@ class KmerCounter():
     return count
 
   def count(self, seq):
-    seq = seq.upper()
+    seq = seq.strip().upper()
+    length = len(seq)
     count = defaultdict(int)
     for i in range(len(seq)-self.k+1):
       count[seq[i:i+self.k]] += 1.0
     count = self.balance_strand(count)
     v = []
     for mer in self.balanced_kmer:
-      v.append(count[mer])
+      v.append(count[mer]/length)
     return v
        
 if __name__ == '__main__':
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('--max_k', default=6, type=int)
+  parser.add_argument('--min_read_length', default=1000, type=int)
   parser.add_argument('fastq1', type=argparse.FileType('r'))
-  parser.add_argument('fastq2', type=argparse.FileType('r'))
+  parser.add_argument('fastq2', type=argparse.FileType('r'), nargs='?')
   args = parser.parse_args()
   
   counters = [KmerCounter(k) for k in range(1, args.max_k+1)]
@@ -62,15 +64,19 @@ if __name__ == '__main__':
   for s in args.fastq1:
     readname=s.strip()[1:].split('#')[0]
     seq1 = next(args.fastq1).strip().upper()
-    count1 = [counter.count(seq1) for counter in counters]
-    count1 = chain.from_iterable(count1)
+    if args.fastq2:
+      next(args.fastq2)
+      seq2 = next(args.fastq2).strip().upper()
+    if len(seq1) >= args.min_read_length:
+      count1 = [counter.count(seq1) for counter in counters]
+      count1 = chain.from_iterable(count1)
+      if args.fastq2:
+        count2 = [counter.count(seq2) for counter in counters]
+        count2 = chain.from_iterable(count2)
+        kmer_count = map(lambda x,y:x+y, count1, count2)
+        print('\t'.join([readname]+list(map(str,kmer_count))))
+      else:
+        print('\t'.join([readname]+list(map(str,count1))))
     next(args.fastq1), next(args.fastq1)
-    
-    next(args.fastq2)
-    seq2 = next(args.fastq2).strip().upper()
-    count2 = [counter.count(seq2) for counter in counters]
-    count2 = chain.from_iterable(count2)
-    next(args.fastq2), next(args.fastq2)
-    
-    kmer_count = map(lambda x,y:x+y, count1, count2)
-    print('\t'.join([readname]+list(map(str,kmer_count))))
+    if args.fastq2:
+      next(args.fastq2), next(args.fastq2)

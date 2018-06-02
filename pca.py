@@ -1,6 +1,5 @@
 import matplotlib
 import matplotlib.cm as cm
-matplotlib.use('Agg')
 from sklearn.decomposition import PCA
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
@@ -35,22 +34,23 @@ data = { taxon: {'color': colors[n],
                  'y': [],
                  'z': [] } for n,taxon in enumerate(sorted_taxons) } 
 
-pca = PCA(n_components=3)
+pca = PCA(n_components=2)
 embed = pca.fit_transform(preprocessing.scale(codes))
-for x,y,z,taxon in zip(embed[:,0], embed[:,1], embed[:,2], taxons):
+for x,y,taxon in zip(embed[:,0], embed[:,1], taxons):
   data[taxon]['x'].append(x)
   data[taxon]['y'].append(y)
-  data[taxon]['z'].append(z)
 
-fig1 = plt.subplot(111)
 handles = []
 for taxon in sorted(data.keys()):
-  handles.append(fig1.scatter(data[taxon]['x'], data[taxon]['y'],
+  handles.append(plt.scatter(data[taxon]['x'], data[taxon]['y'],
                               linewidths=0,
                               alpha=0.5,
                               c=data[taxon]['color'],
                               label=taxon))
-fig1.legend(handles=handles)
+plt.legend(handles=handles,
+            loc=2,
+            prop={'size': 6},
+            borderaxespad=0.)
 plt.savefig(args.code_file.name.split('/')[-1]+'.pca.png')
 
 '''
